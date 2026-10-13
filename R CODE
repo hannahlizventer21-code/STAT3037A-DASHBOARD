@@ -1,3 +1,201 @@
+CODE (BACKUP) 13/10
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    https://shiny.posit.co/
+#
+
+library(shiny)
+library(sf)
+library(stars)
+library(leaflet)
+
+glacierview_clean <- st_read("C:/Users/Hannah/OneDrive/THE UNIVERSITY OF THE WITWATERSRAND 2024-/THIRD YEAR (SEMESTER TWO) (2026)/Spatial Stats/glaciers_clip.shp", quiet = TRUE)
+Indiaview_clean   <- st_read("C:/Users/Hannah/OneDrive/THE UNIVERSITY OF THE WITWATERSRAND 2024-/THIRD YEAR (SEMESTER TWO) (2026)/Spatial Stats/India_isolated.shp", quiet = TRUE)
+Indiaview_reprojected <-st_read("C:/Users/Hannah/OneDrive/THE UNIVERSITY OF THE WITWATERSRAND 2024-/THIRD YEAR (SEMESTER TWO) (2026)/Spatial Stats/india_utm_43.shp", quiet =TRUE)
+Roads_clean <-st_read("C:/Users/Hannah/OneDrive/THE UNIVERSITY OF THE WITWATERSRAND 2024-/THIRD YEAR (SEMESTER TWO) (2026)/Spatial Stats/India_isolated_roads.shp", quiet=TRUE)
+Rivers_clean <-st_read("C:/Users/Hannah/OneDrive/THE UNIVERSITY OF THE WITWATERSRAND 2024-/THIRD YEAR (SEMESTER TWO) (2026)/Spatial Stats/river_utm_43.shp", quiet=TRUE)
+HPview_clean1 <- st_read("C:/Users/Hannah/OneDrive/THE UNIVERSITY OF THE WITWATERSRAND 2024-/THIRD YEAR (SEMESTER TWO) (2026)/Spatial Stats/HPview_utm_43.shp", quiet=TRUE)
+JKview_clean1 <- st_read("C:/Users/Hannah/OneDrive/THE UNIVERSITY OF THE WITWATERSRAND 2024-/THIRD YEAR (SEMESTER TWO) (2026)/Spatial Stats/JKview_utm_43.shp", quiet=TRUE)
+Lview_clean1 <- st_read("C:/Users/Hannah/OneDrive/THE UNIVERSITY OF THE WITWATERSRAND 2024-/THIRD YEAR (SEMESTER TWO) (2026)/Spatial Stats/Lview_utm_43.shp", quiet=TRUE)
+Uview_clean1 <- st_read("C:/Users/Hannah/OneDrive/THE UNIVERSITY OF THE WITWATERSRAND 2024-/THIRD YEAR (SEMESTER TWO) (2026)/Spatial Stats/Uview_utm_43.shp", quiet=TRUE)
+India_slope1 <- terra::rast("C:/Users/Hannah/OneDrive/THE UNIVERSITY OF THE WITWATERSRAND 2024-/THIRD YEAR (SEMESTER TWO) (2026)/Spatial Stats/India_aspect.tif")
+India_aspect1 <- terra::rast("C:/Users/Hannah/OneDrive/THE UNIVERSITY OF THE WITWATERSRAND 2024-/THIRD YEAR (SEMESTER TWO) (2026)/Spatial Stats/India_slope.tif")
+
+
+#Rewrite the names
+Indiaview_clean$shapeName <- gsub("[^[:alnum:] ]", "", 
+                                    enc2utf8(as.character(Indiaview_clean$shapeName)))
+Indiaview_reprojected$shapeName <-gsub("[^[:alnum:] ]", "", 
+                                       enc2utf8(as.character(Indiaview_reprojected$shapeName)))
+glacierview_clean$shapeName <-gsub("[^[:alnum:] ]", "", 
+                                  enc2utf8(as.character(glacierview_clean$shapeName)))
+#Reduce the resolution
+India_slope_50 <- terra::aggregate(India_slope1, fact = 50)
+India_aspect_50 <- terra::aggregate(India_aspect1, fact = 50)
+
+#This displays the resolution
+India_slope_res <- st_as_stars(India_slope_50)
+India_aspect_res <- st_as_stars(India_aspect_50)
+
+#Reproject to WGS 1984 4326 (as Leaflet only operates using this)
+Indiaview_1984<- st_transform(Indiaview_clean, 4326)
+Indiaview_full_1984 <- st_transform(Indiaview_reprojected, 4326)
+Glacierview_1984 <- st_transform(glacierview_clean, 4326)
+Roadsview_1984 <- st_transform(Roads_clean, 4326)
+Riverview_1984 <- st_transform(Rivers_clean, 4326)
+HPview_1984 <-st_transform(HPview_clean1, 4326)
+JKview_1984 <-st_transform(JKview_clean1, 4326)
+Lview_1984 <-st_transform(Lview_clean1, 4326)
+Uview_1984 <-st_transform(Uview_clean1, 4326)
+
+ui <- fluidPage(
+  titlePanel("An App of the Northern Himalayan Regions of India indicating the Glacier Risk"),
+  fluidRow(
+      column(width = 8,
+           leafletOutput("map", width = "100%", height = "600px")
+    ),
+ #Control Panel
+    column(width = 4,
+           h3("LISA Controls"),
+           
+           selectInput("regions_selected", "Select Regions:",
+                       choices = c("Himachal Pradesh","Jammu and Kashmir","Ladakh","Uttarakhand"),
+                       multiple = TRUE, selectize = TRUE),
+           
+           selectInput("glaciers_selected", "Select Glacier Dataset:",
+                       choices = c("Glaciers of the Himalayas"),
+                       multiple = FALSE, selectize = TRUE),
+           
+           selectInput("contiguity_selected", "Select Contiguity Type:",
+                       choices = c("Queen","Rook","KNN"),
+                       multiple = FALSE, selectize = TRUE),
+           
+           selectInput("output_format", "Select Output Format:",
+                       choices = c("CSV","Shapefile","GeoJSON"),
+                       multiple = FALSE, selectize = TRUE),
+           
+           actionButton("run_lisa", "Run LISA Analysis"),
+           downloadButton("download_lisa", "Download LISA Results")
+    )
+  )
+)
+
+
+
+server <- function(input, output) {
+  output$map <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles("Esri.WorldImagery") %>%
+      addRasterImage(India_slope_50, colors = terrain.colors(100), group = "Slope") %>%
+      addRasterImage(India_aspect_50, colors = topo.colors(100), group = "Aspect") %>%
+      addPolygons(data = Indiaview_1984, fillColor="gray",color="black",
+                  weight=1, group="Regions of India Near the Himalayas") %>%
+      addPolylines(data = Indiaview_full_1984, color="black", weight=2, group="Map of India") %>%
+      addCircleMarkers(data = Glacierview_1984, radius=0.5, fillColor="white",color="black", weight=1, fillOpacity=1, 
+                       opacity=1, group="Glaciers of the Himalayas") %>%
+      addPolylines(data = Roadsview_1984 %>% dplyr::filter(rdtype == "National Highway"),
+                   color = "yellow", weight = 1.5, group = "National Highways") %>%
+      addPolylines(data=Roadsview_1984 %>% dplyr::filter(rdtype == "State Highway"),
+                   color = "white", weight = 1, group = "State Highways" ) %>%
+      addPolylines(data = Riverview_1984, color="darkblue", weight=1, group="Rivers") %>%
+      addPolygons(data = HPview_1984, fillColor="#7A4988",color="black", weight=1, group="Himachal Pradesh") %>%
+      addPolygons(data = JKview_1984, fillColor="purple", color="black",weight=1, group="Jammu and Kashmir") %>%
+      addPolygons(data = Lview_1984, fillColor="magenta",color="black",weight=1, group="Ladakh") %>%
+      addPolygons(data = Uview_1984, fillColor="pink",color="black",weight=1, group="Uttarakhand") %>%
+      addLegend(position = "bottomleft",
+                colors = c("gray", "#7A4988","purple","magenta","pink","yellow",
+                           "white","darkblue","aliceblue"), 
+                labels = c("Regions", "Himachel Pradesh","Jammu and Kashmir","Ladakh","Uttarakhand",
+                           "National Highway","State Highway","Rivers", "Glaciers"),
+                title = "Map Layers") %>%
+      addLayersControl(overlayGroups = c("Outline of India","Regions of India Near the Himalayas",
+                                         "Himachal Pradesh","Jammu and Kashmir",
+                                         "Ladakh","Uttarakhand","National Highways", "State Highways","Slope", "Aspect",
+                                         "Rivers","Glaciers of the Himalayas"),
+                       options = layersControlOptions(collapsed = FALSE))
+  })
+  lisa_results <- reactiveVal(NULL)  # store results
+  
+  observeEvent(input$run_lisa, {
+    # Validation checks
+    if (length(input$regions_selected) < 1) {
+      showNotification("Select at least one region.", type="error"); return()
+    }
+    if (length(input$regions_selected) > 4) {
+      showNotification("You can select a maximum of four regions.", type="error"); return()
+    }
+    if (input$glaciers_selected == "") {
+      showNotification("Select a glacier dataset.", type="error"); return()
+    }
+    if (input$contiguity_selected == "") {
+      showNotification("Select a contiguity type.", type="error"); return()
+    }
+    
+    # --- Step 1: Subset regions ---
+    selected_regions <- Indiaview_1984 %>%
+      dplyr::filter(shapeName %in% input$regions_selected)
+    
+    # --- Step 2: Build spatial weights ---
+    nb <- if (input$contiguity_selected == "Queen") {
+      spdep::poly2nb(selected_regions, queen = TRUE)
+    } else if (input$contiguity_selected == "Rook") {
+      spdep::poly2nb(selected_regions, queen = FALSE)
+    } else {
+      coords <- sf::st_coordinates(sf::st_centroid(selected_regions))
+      spdep::knn2nb(spdep::knearneigh(coords, k = 4))
+    }
+    lw <- spdep::nb2listw(nb, style="W")
+    
+    # --- Step 3: Run LISA ---
+    lisa_result <- spdep::localmoran(selected_regions$glacier_density, lw)
+    selected_regions$lisa_cluster <- lisa_result[,5]
+    
+    # Store results
+    lisa_results(selected_regions)
+    
+    # --- Step 4: Update map ---
+    leafletProxy("map") %>%
+      clearGroup("LISA") %>%
+      addPolygons(data = selected_regions,
+                  fillColor = ~colorFactor(c("red","blue","lightgray","darkgray"),
+                                           selected_regions$lisa_cluster)(lisa_cluster),
+                  color="black", weight=1, group="LISA",
+                  popup=~paste("Region:", shapeName, "<br>",
+                               "Cluster:", lisa_cluster))
+  })
+  
+  # --- Step 5: Download Handler ---
+  output$download_lisa <- downloadHandler(
+    filename = function() {
+      fmt <- input$output_format
+      paste0("LISA_results_", Sys.Date(), 
+             if (fmt == "CSV") ".csv" else if (fmt == "Shapefile") ".zip" else ".geojson")
+    },
+    content = function(file) {
+      results <- lisa_results()
+      if (is.null(results)) return()
+      
+      fmt <- input$output_format
+      if (fmt == "CSV") {
+        write.csv(sf::st_drop_geometry(results), file, row.names = FALSE)
+      } else if (fmt == "Shapefile") {
+        # Shapefile requires multiple files, so save to a temp dir and zip
+        tmpdir <- tempdir()
+        shpfile <- file.path(tmpdir, "LISA_results.shp")
+        sf::st_write(results, shpfile, delete_layer = TRUE)
+        zip::zip(file, files = list.files(tmpdir, pattern="LISA_results", full.names=TRUE))
+      } else if (fmt == "GeoJSON") {
+        sf::st_write(results, file, driver = "GeoJSON", delete_layer = TRUE)
+      }
+    }
+  )
+}
+
+
+
 FINAL CODE (01/10)
 #CLEANING
 #Input of Datasets (25/09)-(01/10)

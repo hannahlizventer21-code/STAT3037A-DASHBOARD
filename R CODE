@@ -1413,6 +1413,114 @@ shinyApp(
   server = server
 )
 
+#=======================================================================
 
+library(shiny)
+
+ui <- fluidPage(
+
+  # Website title
+  titlePanel("Spatial Analysis Dashboard"),
+
+  # Navigation tabs
+  tabsetPanel(
+
+    # TAB 1: Created by Hannah
+    tabPanel(
+      "Tab 1",
+      h2("Section 1"),
+      p("This section will be completed by hannah.")
+    ),
+
+    # TAB 2: Statistical Methods
+    tabPanel(
+      "Statistical Methods",
+
+      h2("Statistical Methods"),
+      p("This section describes the statistical methods used in the analysis."),
+
+      # KDE section
+      h3("Kernel Density Estimation (KDE)"),
+      wellPanel(
+        p("Placeholder for KDE information."),
+        p("Add the method description, purpose, parameters and results here.")
+      ),
+
+      # LISA section
+      h3("Local Indicators of Spatial Association (LISA)"),
+      wellPanel(
+        p("Placeholder for LISA information."),
+        p("Add the method description, purpose, parameters and results here.")
+      ),
+
+      # KNN section
+      h3("K-Nearest Neighbours (KNN)"),
+      wellPanel(
+        p("Placeholder for KNN information."),
+        p("Add the method description, purpose, parameters and results here.")
+      )
+    ),
+
+    # TAB 3: Dashboard link
+    tabPanel(
+      "Dashboard",
+
+      h2("Interactive Dashboard"),
+      p("Access the interactive spatial analysis dashboard below."),
+
+      # Replace the URL with dashboard link
+      a(
+        "Open Dashboard",
+        href = "https://example.com",
+        target = "_blank",
+        class = "btn btn-primary"
+      ),
+
+      br(),
+      br(),
+      p("Replace the example URL with the published dashboard link.")
+    ),
+
+    # TAB 4: Created by Hannah
+    tabPanel(
+      "Tab 4",
+      h2("Section 4"),
+      p("This section will be completed by hannah.")
+    ),
+
+    # TAB 5: Metadata
+    tabPanel(
+      "Metadata",
+
+      h2("Data Metadata"),
+      p("Placeholder for information about the datasets used in this project."),
+
+      h3("Dataset Information"),
+      wellPanel(
+        p("Dataset name: To be added"),
+        p("Data source: To be added"),
+        p("Spatial resolution: To be added"),
+        p("Coordinate reference system (CRS): To be added"),
+        p("Date of data collection: To be added")
+      ),
+
+      h3("Data Processing"),
+      wellPanel(
+        p("Placeholder for data cleaning, processing and preparation details.")
+      ),
+
+      h3("Data Limitations"),
+      wellPanel(
+        p("Placeholder for data quality issues, limitations and assumptions.")
+      )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  # Add server-side functionality here if required
+}
+
+shinyApp(ui = ui, server = server)
 
 
